@@ -22,10 +22,10 @@ __all__ = [
     "HeaderBlock",
     "ParagraphBlock",
     "ListBlock",
+    "TableBlock",
     "DelimiterBlock",
     "ImageBlock"
 ]
-
 
 
 def _sanitize(html: str) -> str:
@@ -41,7 +41,6 @@ class EditorJsBlock:
     _data: dict
     """The raw JSON data of the entire block"""
 
-
     @property
     def id(self) -> t.Optional[str]:
         """
@@ -49,8 +48,6 @@ class EditorJsBlock:
         """
 
         return self._data.get("id", None)
-
-
 
     @property
     def type(self) -> t.Optional[str]:
@@ -60,7 +57,6 @@ class EditorJsBlock:
 
         return self._data.get("type", None)
 
-
     @property
     def data(self) -> dict:
         """
@@ -68,7 +64,6 @@ class EditorJsBlock:
         """
 
         return self._data.get("data", {})
-
 
     def html(self, sanitize: bool=False) -> str:
         """
@@ -79,7 +74,6 @@ class EditorJsBlock:
         """
 
         raise NotImplementedError()
-
 
 
 class HeaderBlock(EditorJsBlock):
@@ -94,7 +88,6 @@ class HeaderBlock(EditorJsBlock):
 
         return self.data.get("text", None)
 
-
     @property
     def level(self) -> int:
         """
@@ -108,10 +101,8 @@ class HeaderBlock(EditorJsBlock):
 
         return _level
 
-
     def html(self, sanitize: bool=False) -> str:
         return rf'<h{self.level} class="cdx-block ce-header">{_sanitize(self.text) if sanitize else self.text}</h{self.level}>'
-
 
 
 class ParagraphBlock(EditorJsBlock):
@@ -123,10 +114,8 @@ class ParagraphBlock(EditorJsBlock):
 
         return self.data.get("text", None)
 
-
     def html(self, sanitize: bool=False) -> str:
         return rf'<p class="cdx-block ce-paragraph">{_sanitize(self.text) if sanitize else self.text}</p>'
-
 
 
 class ListBlock(EditorJsBlock):
@@ -141,7 +130,6 @@ class ListBlock(EditorJsBlock):
 
         return self.data.get("style", None)
 
-
     @property
     def items(self) -> t.List[str]:
         """
@@ -149,7 +137,6 @@ class ListBlock(EditorJsBlock):
         """
 
         return self.data.get("items", [])
-
 
     def html(self, sanitize: bool=False) -> str:
         if self.style not in self.VALID_STYLES:
@@ -162,11 +149,32 @@ class ListBlock(EditorJsBlock):
         return rf'<{_type} class="cdx-block cdx-list cdx-list--{self.style}">{_items_html}</{_type}>'
 
 
+class TableBlock(EditorJsBlock):
+    @property
+    def content(self) -> t.List[t.List[str]]:
+        """
+            Returns the list's items, in raw format.
+        """
+
+        return self.data.get("content", [])
+
+    def html(self, sanitize: bool = False) -> str:
+        rows = []
+        for row in self.content:
+            if row:
+                val = [f"<td>{_sanitize(item) if sanitize else item}</td>" for item in row]
+                val_html = f"<tr>{''.join(val)}</tr>"
+                rows.append(val_html)
+
+        if len(rows) == 0:
+            return ''
+
+        return f'<table class="cdx-block cdx-table"><tbody>{"".join(rows)}</tbody></table>'
+
 
 class DelimiterBlock(EditorJsBlock):
     def html(self, sanitize: bool=False) -> str:
         return r'<div class="cdx-block ce-delimiter"></div>'
-
 
 
 class ImageBlock(EditorJsBlock):
@@ -178,7 +186,6 @@ class ImageBlock(EditorJsBlock):
 
         return self.data.get("file", {}).get("url", None)
 
-
     @property
     def caption(self) -> t.Optional[str]:
         """
@@ -186,7 +193,6 @@ class ImageBlock(EditorJsBlock):
         """
 
         return self.data.get("caption", None)
-
 
     @property
     def with_border(self) -> bool:
@@ -196,7 +202,6 @@ class ImageBlock(EditorJsBlock):
 
         return self.data.get("withBorder", False)
 
-
     @property
     def stretched(self) -> bool:
         """
@@ -205,7 +210,6 @@ class ImageBlock(EditorJsBlock):
 
         return self.data.get("stretched", False)
 
-
     @property
     def with_background(self) -> bool:
         """
@@ -213,7 +217,6 @@ class ImageBlock(EditorJsBlock):
         """
 
         return self.data.get("withBackground", False)
-
 
     def html(self, sanitize: bool=False) -> str:
         if self.file_url.startswith("data:image/"):
