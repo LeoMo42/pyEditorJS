@@ -34,6 +34,7 @@ class EditorJsParser:
             'header': HeaderBlock,
             'paragraph': ParagraphBlock,
             'list': ListBlock,
+            'table': TableBlock,
             'delimiter': DelimiterBlock,
             'image': ImageBlock,
         }        
