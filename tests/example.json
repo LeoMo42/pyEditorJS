@@ -30,9 +30,23 @@
             "data" : {
                 "style" : "unordered",
                 "items" : [
-                    "It is a block-styled editor",
-                    "It returns clean data output in JSON",
-                    "Designed to be extendable and pluggable with a simple API"
+                    {
+                        "content": "It is a block-styled editor"
+                    },
+                    {
+                        "content": "It returns clean data output in JSON"
+                    },
+                    {
+                        "content": "Designed to be extendable and pluggable with a simple API",
+                        "items" : [
+                            {
+                                "content": "nested item on 'Designed to be extendable and pluggable with a simple API'"
+                            },
+                            {
+                                "content": "nested item2 on 'Designed to be extendable and pluggable with a simple API'"
+                            }
+                        ]
+                    }
                 ]
             }
         },
@@ -110,6 +124,144 @@
                 "withBorder" : false,
                 "stretched" : false,
                 "withBackground" : false
+            }
+        },
+        {
+            "id" : "0GVmPpF73X",
+            "type" : "table",
+            "data" : {
+                "withHeadings": false,
+                "stretched": false,
+                "content": [
+                    [
+                        "row 1 column 1",
+                        "row 1 column 2",
+                        "row 1 column 3"
+                    ],
+                    [
+                        "",
+                        "row 2 column 2",
+                        ""
+                    ]
+                ]
+            }
+        },
+        {
+            "id" : "0GVmPpF73Y",
+            "type" : "innerLink",
+            "data" : {
+                "document_id": "67b4577ce38b05e989ef5fdb",
+                "text": "Link to doc1"
+            }
+        },
+        {
+            "id" : "0GVmPpF73Z",
+            "type" : "outerLink",
+            "data" : {
+                "href": "http://localhost:8000/docs#/",
+                "text": "External Link"
+            }
+        },
+        {
+            "id" : "0GVmPpF73a",
+            "type" : "columns",
+            "data" : {
+                "cols": [
+                    {
+                        "time": 1748539025558,
+                        "blocks": [
+                            {
+                                "id" : "zX_91R2aNN",
+                                "type" : "header",
+                                "data" : {
+                                    "text" : "This is the cols header",
+                                    "level" : 3
+                                }
+                            },
+                            {
+                                "id" : "APpefQ3iff",
+                                "type" : "paragraph",
+                                "data" : {
+                                    "text" : "There are dozens of xxx, CTA-buttons and even games."
+                                }
+                            },
+                            {
+                                "id" : "APpefQ3ifg",
+                                "type" : "paragraph",
+                                "data" : {
+                                    "text" : "There are nothing more."
+                                }
+                            }
+                        ],
+                        "version": "2.31.0-rc.7"
+                    },
+                    {
+                        "time": 1748539025559,
+                        "blocks": [
+                            {
+                                "id" : "zX_91R2aNN2",
+                                "type" : "header",
+                                "data" : {
+                                    "text" : "This is the 2nd cols header",
+                                    "level" : 3
+                                }
+                            },
+                            {
+                                "id" : "APpefQ3iff2",
+                                "type" : "paragraph",
+                                "data" : {
+                                    "text" : "Here's the content of cols"
+                                }
+                            },
+                            {
+                                "id" : "APpefQ3ifg2",
+                                "type" : "paragraph",
+                                "data" : {
+                                    "text" : "... And nothing more."
+                                }
+                            }
+                        ],
+                        "version": "2.31.0-rc.7"
+                    }
+                ]
+            }
+        },
+        {
+            "id" : "0GVmPpF73c",
+            "type" : "expand",
+            "data" : {
+                "title": "<b>Expanded content</b>",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "data": {
+                            "text": "Expanded content phrase1"
+                        }
+                    },
+                    {
+                        "type": "paragraph",
+                        "data": {
+                            "text": "Expanded content phrase2"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "id": "NhSbfRt_vh",
+            "type": "alert",
+            "data": {
+                "type": "success",
+                "blocks": [
+                    {
+                        "id": "vgtUawE9Vm",
+                        "type": "paragraph",
+                        "data": {
+                            "text": "Something happened successfully!"
+                        }
+                    }
+                ],
+                "version": "2.31.0-rc.7"
             }
         }
     ],

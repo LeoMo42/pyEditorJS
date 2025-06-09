@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 __all__ = [
-    'EditorJsParser',
+    'EditorJsParserVv',
     'EditorJsParseError',
 
     'EditorJsBlock',
@@ -21,14 +21,12 @@ except Exception:
 __doc__ = __readme__
 
 
-
-from .parser import EditorJsParser
+from .parser import EditorJsParserVv
 from .blocks import *
 from .exceptions import EditorJsParseError
 
 
-
 if __name__ == "__main__":
     _ = [
-        EditorJsParser
+        EditorJsParserVv
     ]

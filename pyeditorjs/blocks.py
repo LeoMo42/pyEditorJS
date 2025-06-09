@@ -24,7 +24,12 @@ __all__ = [
     "ListBlock",
     "TableBlock",
     "DelimiterBlock",
-    "ImageBlock"
+    "ImageBlock",
+    "InnerLinkBlock",
+    "OuterLinkBlock",
+    "ColumnsBlock",
+    "ExpandBlock",
+    "AlertBlock",
 ]
 
 
@@ -65,7 +70,7 @@ class EditorJsBlock:
 
         return self._data.get("data", {})
 
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         """
             Returns the HTML representation of the block.
 
@@ -101,7 +106,7 @@ class HeaderBlock(EditorJsBlock):
 
         return _level
 
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         return rf'<h{self.level} class="cdx-block ce-header">{_sanitize(self.text) if sanitize else self.text}</h{self.level}>'
 
 
@@ -114,7 +119,7 @@ class ParagraphBlock(EditorJsBlock):
 
         return self.data.get("text", None)
 
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         return rf'<p class="cdx-block ce-paragraph">{_sanitize(self.text) if sanitize else self.text}</p>'
 
 
@@ -138,11 +143,31 @@ class ListBlock(EditorJsBlock):
 
         return self.data.get("items", [])
 
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         if self.style not in self.VALID_STYLES:
             raise EditorJsParseError(f"`{self.style}` is not a valid list style.")
 
-        _items = [f"<li>{_sanitize(item) if sanitize else item}</li>" for item in self.items]
+        def content_from_item(item):
+            content = ''
+            if isinstance(item, str):
+                content = _sanitize(item) if sanitize else item
+            elif not isinstance(item, dict):
+                raise ValueError("Expected 'string' or 'dict'")
+
+            if 'content' in item:
+                content = item['content']
+                if sanitize:
+                    content = _sanitize(content)
+
+                nested_items = item.get('items', [])
+                if len(nested_items) > 0:
+                    data = {'style': self.style, **item}
+                    nested_content = ListBlock(_data={'data': data}).html(sanitize)
+                    content += nested_content
+
+            return f"<li>{content}</li>"
+
+        _items = [content_from_item(item) for item in self.items]
         _type = "ul" if self.style == "unordered" else "ol"
         _items_html = ''.join(_items)
 
@@ -158,7 +183,7 @@ class TableBlock(EditorJsBlock):
 
         return self.data.get("content", [])
 
-    def html(self, sanitize: bool = False) -> str:
+    def html(self, sanitize: bool = False, service=None) -> str:
         rows = []
         for row in self.content:
             if row:
@@ -173,8 +198,83 @@ class TableBlock(EditorJsBlock):
 
 
 class DelimiterBlock(EditorJsBlock):
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         return r'<div class="cdx-block ce-delimiter"></div>'
+
+
+class InnerLinkBlock(EditorJsBlock):
+    @property
+    def href(self) -> str:
+        return self.data.get('document_id', '')
+
+    @property
+    def text(self) -> t.Optional[str]:
+        """
+            The text content of the innerLink.
+        """
+
+        return self.data.get("text", None)
+
+    def html(self, sanitize: bool=False, service=None) -> str:
+        return rf'<div class="cdx-block ce-link"><a href="/{self.href}">{_sanitize(self.text) if sanitize else self.text}</a></div>'
+
+
+class OuterLinkBlock(EditorJsBlock):
+    @property
+    def href(self) -> str:
+        return self.data.get('href', '')
+
+    @property
+    def text(self) -> t.Optional[str]:
+        """
+            The text content of the innerLink.
+        """
+
+        return self.data.get("text", None)
+
+    def html(self, sanitize: bool=False, service=None) -> str:
+        return rf'<div class="cdx-block ce-link"><a href="{self.href}">{_sanitize(self.text) if sanitize else self.text}</a></div>'
+
+
+class ColumnsBlock(EditorJsBlock):
+    @property
+    def cols(self) -> list[dict]:
+        return self.data.get('cols', [])
+
+    def html(self, sanitize: bool=False, service=None) -> str:
+        cols_html = [service(content=x).html(sanitize) for x in self.cols]
+        content = "\n".join(cols_html)
+        return rf'<div class="cdx-block ce-cols">{content}</div>'
+
+
+class ExpandBlock(EditorJsBlock):
+    @property
+    def title(self) -> str:
+        return self.data.get('title', '')
+
+    @property
+    def content(self) -> list[dict]:
+        return self.data.get('content', [])
+
+    def html(self, sanitize: bool=False, service=None) -> str:
+        data = {'blocks': self.content}
+        htmls = [
+            _sanitize(self.title) if sanitize else self.title,
+            service(content=data).html(sanitize)
+        ]
+        content = "\n".join(htmls)
+        return rf'<div class="cdx-block ce-expand">{content}</div>'
+
+
+class AlertBlock(EditorJsBlock):
+    @property
+    def blocks(self) -> list[dict]:
+        return self.data.get('blocks', [])
+
+    def html(self, sanitize: bool=False, service=None) -> str:
+        data = {'blocks': self.blocks}
+        content = service(content=data).html(sanitize)
+        return rf'<div class="cdx-block ce-alert">{content}</div>'
 
 
 class ImageBlock(EditorJsBlock):
@@ -218,7 +318,7 @@ class ImageBlock(EditorJsBlock):
 
         return self.data.get("withBackground", False)
 
-    def html(self, sanitize: bool=False) -> str:
+    def html(self, sanitize: bool=False, service=None) -> str:
         if self.file_url.startswith("data:image/"):
             _img = self.file_url
         else:

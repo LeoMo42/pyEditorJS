@@ -2,14 +2,12 @@ import typing as t
 
 from dataclasses import dataclass
 
-
 from .exceptions import EditorJsParseError
 from .blocks import *
 
 
-
 @dataclass
-class EditorJsParser:
+class EditorJsParserVv:
     """
         An Editor.js parser.
     """
@@ -17,19 +15,15 @@ class EditorJsParser:
     content: dict
     """The JSON data of Editor.js content."""
 
-
     def __post_init__(self) -> None:
         if not isinstance(self.content, dict):
             raise EditorJsParseError(f"Content must be `dict`, not {type(self.content).__name__}")
-
-
 
     @staticmethod
     def _get_block(data: dict) -> t.Optional[t.Type[EditorJsBlock]]:
         """
             Obtains block instance from block data.
         """
-
         BLOCKS_MAP: t.Dict[str, t.Type[EditorJsBlock]] = {
             'header': HeaderBlock,
             'paragraph': ParagraphBlock,
@@ -37,8 +31,12 @@ class EditorJsParser:
             'table': TableBlock,
             'delimiter': DelimiterBlock,
             'image': ImageBlock,
-        }        
-
+            'innerLink': InnerLinkBlock,
+            'outerLink': OuterLinkBlock,
+            'columns': ColumnsBlock,
+            'expand': ExpandBlock,
+            'alert': AlertBlock,
+        }
 
         _type = data.get("type", None)
 
@@ -47,7 +45,6 @@ class EditorJsParser:
 
         except KeyError:
             return None
-
 
     def blocks(self) -> t.List[t.Type[EditorJsBlock]]:
         """
@@ -60,7 +57,6 @@ class EditorJsParser:
         if not isinstance(blocks, list):
             raise EditorJsParseError(f"Blocks is not `list`, but `{type(blocks).__name__}`")
 
-
         for block_data in blocks:
             block = self._get_block(data=block_data)
             if block is None:
@@ -68,17 +64,12 @@ class EditorJsParser:
 
             all_blocks.append(block)
 
-
         return all_blocks
-
-
 
     def __iter__(self) -> t.Iterator[t.Type[EditorJsBlock]]:
         """Returns `iter(self.blocks())`"""
 
         return iter(self.blocks())
-
-
 
     def html(self, sanitize: bool=False) -> str:
         """
@@ -88,4 +79,4 @@ class EditorJsParser:
             - `sanitize` - whether to also sanitize the blocks' texts/contents.
         """
 
-        return '\n'.join([block.html(sanitize=sanitize) for block in self.blocks()])
+        return '\n'.join([block.html(sanitize=sanitize, service=EditorJsParserVv) for block in self.blocks()])
