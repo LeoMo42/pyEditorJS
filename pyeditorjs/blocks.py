@@ -260,12 +260,13 @@ class ExpandBlock(EditorJsBlock):
     def content(self) -> list[dict]:
         return self.data.get('content', [])
 
-    def html(self, sanitize: bool=False, service=None) -> str:
+    def html(self, sanitize: bool = False, service=None) -> str:
         data = {'blocks': self.content}
-        htmls = [
-            _sanitize(self.title) if sanitize else self.title,
-            service(content=data).html(sanitize)
-        ]
+        htmls = []
+        if self.title:
+            htmls.append(rf'<h3>{_sanitize(self.title) if sanitize else self.title}</h3>')
+
+        htmls.append(service(content=data).html(sanitize))
         content = "\n".join(htmls)
         return rf'<div class="cdx-block ce-expand">{content}</div><br/>'
 
