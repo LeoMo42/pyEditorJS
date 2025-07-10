@@ -1,10 +1,10 @@
 import json
 
 from pathlib import Path
-
+from markdownify import markdownify as md
 from pyeditorjs.parser import EditorJsParserVv
 
-EXAMPLE_JSON = json.loads((Path(__file__).parent / 'example.json').read_text(encoding='utf-8'))
+EXAMPLE_JSON = json.loads((Path(__file__).parent / 'example2.json').read_text(encoding='utf-8'))
 PARSER = EditorJsParserVv(content=EXAMPLE_JSON)
 
 
@@ -15,7 +15,7 @@ def test_parser():
 
     html = PARSER.html(True)
 
-    # print(html)
+    print(html)
 #     assert html == """<h1 class="cdx-block ce-header">Editor.js</h1>
 # <p class="cdx-block ce-paragraph">Hey. Meet the new Editor. On this page you can see it in action — try to edit this text.</p>
 # <h3 class="cdx-block ce-header">Key features</h3>
@@ -32,7 +32,14 @@ def test_parser():
 # <div class="cdx-block image-tool image-tool--filled   "><div class="image-tool__image"><div class="image-tool__image-preloader"></div><img class="image-tool__image-picture" src="https://codex.so/public/app/img/external/codex2x.png"/></div><div class="image-tool__caption" data-placeholder="Caption"></div></div></div>
 # <table class="cdx-block cdx-table"><tbody><tr><td>row 1 column 1</td><td>row 1 column 2</td><td>row 1 column 3</td></tr><tr><td></td><td>row 2 column 2</td><td></td></tr></tbody></table>
 # """
-    (Path(__file__).parent / 'example.html').write_text(html + '\n', encoding='utf-8')
+    (Path(__file__).parent / 'example2.html').write_text(html + '\n', encoding='utf-8')
+
+
+    # parser = EditorJsParserVv({'blocks': blocks})
+    # html = parser.html()
+    data = md(html, heading_style='ATX')
+    data = data.replace('\n\n', '\n')
+    print(data)
 
 
 def test_extra():

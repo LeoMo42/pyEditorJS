@@ -119,8 +119,12 @@ class ParagraphBlock(EditorJsBlock):
 
         return self.data.get("text", None)
 
-    def html(self, sanitize: bool=False, service=None) -> str:
-        return rf'<p class="cdx-block ce-paragraph">{_sanitize(self.text) if sanitize else self.text}</p>'
+    def html(self, sanitize: bool = False, service=None) -> str:
+        _text = _sanitize(self.text) if sanitize else self.text
+        if self.text == '':
+            return rf'<p class="cdx-block ce-paragraph">{_text}</p><br/>'
+        else:
+            return rf'<p class="cdx-block ce-paragraph">{_text}</p>'
 
 
 class ListBlock(EditorJsBlock):
@@ -263,7 +267,7 @@ class ExpandBlock(EditorJsBlock):
             service(content=data).html(sanitize)
         ]
         content = "\n".join(htmls)
-        return rf'<div class="cdx-block ce-expand">{content}</div>'
+        return rf'<div class="cdx-block ce-expand">{content}</div><br/>'
 
 
 class AlertBlock(EditorJsBlock):
@@ -274,7 +278,7 @@ class AlertBlock(EditorJsBlock):
     def html(self, sanitize: bool=False, service=None) -> str:
         data = {'blocks': self.blocks}
         content = service(content=data).html(sanitize)
-        return rf'<div class="cdx-block ce-alert">{content}</div>'
+        return rf'<div class="cdx-block ce-alert">{content}</div><br/>'
 
 
 class ImageBlock(EditorJsBlock):
@@ -292,7 +296,7 @@ class ImageBlock(EditorJsBlock):
             The image's caption.
         """
 
-        return self.data.get("caption", None)
+        return self.data.get("caption", 'Image')
 
     @property
     def with_border(self) -> bool:
@@ -324,13 +328,15 @@ class ImageBlock(EditorJsBlock):
         else:
             _img = _sanitize(self.file_url) if sanitize else self.file_url
 
+        _caption = _sanitize(self.caption) if sanitize else self.caption
+
         parts = [
             rf'<div class="cdx-block image-tool image-tool--filled {"image-tool--stretched" if self.stretched else ""} {"image-tool--withBorder" if self.with_border else ""} {"image-tool--withBackground" if self.with_background else ""}">'
             r'<div class="image-tool__image">',
             r'<div class="image-tool__image-preloader"></div>',
-            rf'<img class="image-tool__image-picture" src="{_img}"/>',
+            rf'<img class="image-tool__image-picture" src="{_img}"/ alt="{_caption}">',
             r'</div>'
-            rf'<div class="image-tool__caption" data-placeholder="{_sanitize(self.caption) if sanitize else self.caption}"></div>'
+            rf'<div class="image-tool__caption" data-placeholder="{_caption}"></div>'
             r'</div>'
             r'</div>'
         ]
