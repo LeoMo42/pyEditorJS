@@ -128,7 +128,7 @@ class ParagraphBlock(EditorJsBlock):
 
 
 class ListBlock(EditorJsBlock):
-    VALID_STYLES = ('unordered', 'ordered')
+    VALID_STYLES = ('unordered', 'ordered', 'checklist')
     """Valid list order styles."""
 
     @property
@@ -163,6 +163,12 @@ class ListBlock(EditorJsBlock):
                 if sanitize:
                     content = _sanitize(content)
 
+                # Handle checklist checkbox
+                if self.style == 'checklist':
+                    checked = item.get('meta', {}).get('checked', False)
+                    checkbox = f'<input type="checkbox" {"checked" if checked else ""} disabled> '
+                    content = checkbox + content
+
                 nested_items = item.get('items', [])
                 if len(nested_items) > 0:
                     data = {'style': self.style, **item}
@@ -172,7 +178,7 @@ class ListBlock(EditorJsBlock):
             return f"<li>{content}</li>"
 
         _items = [content_from_item(item) for item in self.items]
-        _type = "ul" if self.style == "unordered" else "ol"
+        _type = "ul" if self.style in ("unordered", "checklist") else "ol"
         _items_html = ''.join(_items)
 
         return rf'<{_type} class="cdx-block cdx-list cdx-list--{self.style}">{_items_html}</{_type}>'
@@ -182,12 +188,63 @@ class TableBlock(EditorJsBlock):
     @property
     def content(self) -> t.List[t.List[str]]:
         """
-            Returns the list's items, in raw format.
+            Returns the list's items, in raw format (old table format).
         """
 
         return self.data.get("content", [])
 
-    def html(self, sanitize: bool = False, service=None) -> str:
+    @property
+    def grid(self) -> t.List[t.List[str]]:
+        """
+            Returns the grid of cell IDs (new table format).
+        """
+        return self.data.get("grid", [])
+
+    @property
+    def merges(self) -> t.List[dict]:
+        """
+            Returns the list of merged cells info.
+        """
+        return self.data.get("merges", [])
+
+    @property
+    def cell_docs(self) -> dict:
+        """
+            Returns the cell documents (content for each cell).
+        """
+        return self.data.get("cellDocs", {})
+
+    @property
+    def cell_meta(self) -> dict:
+        """
+            Returns the cell metadata (styling, classes, etc).
+        """
+        return self.data.get("cellMeta", {})
+
+    @property
+    def column_widths(self) -> t.List[t.Optional[int]]:
+        """
+            Returns column widths.
+        """
+        return self.data.get("columnWidths", [])
+
+    @property
+    def row_heights(self) -> t.List[t.Optional[int]]:
+        """
+            Returns row heights.
+        """
+        return self.data.get("rowHeights", [])
+
+    def _is_new_format(self) -> bool:
+        """
+            Check if this is the new table format (with grid) or old format (with content).
+        """
+        return "grid" in self.data
+
+    def _render_old_format(self, sanitize: bool) -> str:
+        """
+            Render old table format (simple content array).
+        """
         rows = []
         for row in self.content:
             if row:
@@ -199,6 +256,109 @@ class TableBlock(EditorJsBlock):
             return ''
 
         return f'<table class="cdx-block cdx-table"><tbody>{"".join(rows)}</tbody></table>'
+
+    def _render_new_format(self, sanitize: bool, service) -> str:
+        """
+            Render new table format (with grid, cellDocs, merges, etc).
+        """
+        if not self.grid:
+            return ''
+
+        # Build a map of merged cells
+        merge_map = {}  # cell_id -> {rowspan, colspan}
+        skip_cells = set()  # cell IDs that should be skipped (they're part of a merge)
+
+        for merge in self.merges:
+            anchor_id = merge.get("anchorCellId")
+            rowspan = merge.get("rowspan", 1)
+            colspan = merge.get("colspan", 1)
+            merge_map[anchor_id] = {"rowspan": rowspan, "colspan": colspan}
+
+            # Find the anchor cell position
+            anchor_row = -1
+            anchor_col = -1
+            for r_idx, row in enumerate(self.grid):
+                if anchor_id in row:
+                    anchor_row = r_idx
+                    anchor_col = row.index(anchor_id)
+                    break
+
+            # Mark cells that should be skipped
+            if anchor_row >= 0 and anchor_col >= 0:
+                for r in range(anchor_row, min(anchor_row + rowspan, len(self.grid))):
+                    for c in range(anchor_col, min(anchor_col + colspan, len(self.grid[r]))):
+                        if r != anchor_row or c != anchor_col:
+                            cell_id = self.grid[r][c]
+                            skip_cells.add(cell_id)
+
+        # Build table HTML
+        rows_html = []
+        for row_idx, row in enumerate(self.grid):
+            cells_html = []
+            for col_idx, cell_id in enumerate(row):
+                if cell_id in skip_cells:
+                    continue
+
+                # Get cell content
+                cell_doc = self.cell_docs.get(cell_id, {})
+                cell_blocks = cell_doc.get("blocks", [])
+
+                if cell_blocks and service:
+                    # Render nested blocks using service
+                    cell_content = service(content={"blocks": cell_blocks}).html(sanitize)
+                else:
+                    cell_content = ""
+
+                # Get cell styling
+                meta = self.cell_meta.get(cell_id, {})
+                classes = meta.get("classes", "")
+                background = meta.get("background")
+                borders = meta.get("borders", {})
+
+                # Build cell style
+                styles = []
+                if background:
+                    styles.append(f"background-color: {background}")
+
+                if borders:
+                    for side in ["top", "right", "bottom", "left"]:
+                        if side in borders:
+                            styles.append(f"border-{side}: 2px solid {borders[side]}")
+
+                # Add column width if available
+                if col_idx < len(self.column_widths) and self.column_widths[col_idx]:
+                    styles.append(f"width: {self.column_widths[col_idx]}px")
+
+                style_attr = f' style="{"; ".join(styles)}"' if styles else ""
+                class_attr = f' class="{classes}"' if classes else ""
+
+                # Check if this cell is merged
+                merge_info = merge_map.get(cell_id)
+                if merge_info:
+                    rowspan_attr = f' rowspan="{merge_info["rowspan"]}"' if merge_info["rowspan"] > 1 else ""
+                    colspan_attr = f' colspan="{merge_info["colspan"]}"' if merge_info["colspan"] > 1 else ""
+                else:
+                    rowspan_attr = ""
+                    colspan_attr = ""
+
+                cells_html.append(
+                    f"<td{class_attr}{style_attr}{rowspan_attr}{colspan_attr}>{cell_content}</td>"
+                )
+
+            # Add row height if available
+            row_style = ""
+            if row_idx < len(self.row_heights) and self.row_heights[row_idx]:
+                row_style = f' style="height: {self.row_heights[row_idx]}px"'
+
+            rows_html.append(f"<tr{row_style}>{''.join(cells_html)}</tr>")
+
+        return f'<table class="cdx-block cdx-table"><tbody>{"".join(rows_html)}</tbody></table>'
+
+    def html(self, sanitize: bool = False, service=None) -> str:
+        if self._is_new_format():
+            return self._render_new_format(sanitize, service)
+        else:
+            return self._render_old_format(sanitize)
 
 
 class DelimiterBlock(EditorJsBlock):
